@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>過去現在絵因果経：善慧童子の修行 (軽量版+立ち絵)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* フォント設定 */
+        body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; }
+
+        /* シーン全体のコンテナ */
+        #gameContainer {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            background-color: #fce7f3;
+            background-image: 
+                radial-gradient(circle at 10% 10%, #f9a8d4 1px, transparent 1px),
+                radial-gradient(circle at 90% 90%, #f9a8d4 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            position: relative; 
+        }
+
+        /* 画像表示エリア (正方形の枠に調整) */
+        #sceneImage {
+            width: 95%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1; 
+            height: auto; 
+            background-size: contain; 
+            background-repeat: no-repeat; 
+            background-position: center;
+            transition: opacity 0.5s ease-in-out; 
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+        
+        /* 白いモヤ（フェード）用のオーバーレイ */
+        #fadeOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            z-index: 20;
+            pointer-events: none; 
+        }
+
+        /* 吹き出しエリア */
+        #dialogBox {
+            width: 95%;
+            max-width: 500px; 
+            min-height: 120px; 
+            padding: 1rem;
+            margin: 1rem 0;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            cursor: pointer; 
+            z-index: 10; 
+        }
+
+        /* 進行ボタン（タップ）のアニメーション */
+        @keyframes bounce-tap {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        #nextButton {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: bold;
+            color: #3b82f6; 
+            background-color: #e0f2fe; 
+            border: 2px solid #3b82f6;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: background-color 0.1s;
+            animation: bounce-tap 1s infinite;
+        }
+
+        #nextButton:active {
+            transform: scale(0.95) translateY(0) !important;
+            animation: none;
+        }
+        
+        /* 選択肢ボタン */
+        .choice-button {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            background-color: #3b82f6; 
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.05s;
+            text-align: left;
+            box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        .choice-button:hover {
+            background-color: #2563eb; 
+        }
+
+        .choice-button:active {
+            transform: scale(0.99);
+        }
+        
+        /* キャラクター名表示 */
+        #smidaName {
+            background-color: #a7f3d0; 
+            color: #065f46; 
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem; 
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        /* キャラクター立ち絵のスタイル */
+        #characterPortrait {
+            position: absolute;
+            bottom: calc(120px + 1rem); 
+            width: 150px; 
+            height: auto;
+            max-height: 250px; 
+            object-fit: contain; 
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); 
+            z-index: 5; 
+            transition: opacity 0.3s ease-in-out;
+            opacity: 0; 
+        }
+
+        /* 画面幅が広い場合の調整 */
+        @media (min-width: 640px) {
+             #characterPortrait {
+                /* 500pxボックスの左端は画面中央-250px。立ち絵の幅が150px */
+                left: calc(50% - 250px);
+                transform: translateX(0); /* 横方向の調整を解除 */
+            }
+        }
+        
+        /* 画面幅が狭い場合（モバイル）の調整 */
+        @media (max-width: 639px) {
+            #characterPortrait {
+                /* モバイルでは吹き出しに重ねる形で少し内側に配置 */
+                left: 10px; /* 画面左端からのオフセット */
+                bottom: calc(120px + 2rem); 
+                max-height: 200px;
+                width: 120px;
+            }
+        }
+
+
+        #characterPortrait.active {
+            opacity: 1; 
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    
+    <!-- シーン画像エリア -->
+    <div id="sceneImage">
+        <!-- 白いモヤのオーバーレイ -->
+        <div id="fadeOverlay"></div>
+    </div>
+
+    <!-- キャラクター立ち絵 -->
+    <img id="characterPortrait" src="" alt="キャラクターの立ち絵" class="hidden">
+
+    <!-- 吹き出しエリア -->
+    <div id="dialogBox">
+        <!-- キャラクター名（セリフがある場合のみ表示） -->
+        <div id="smidaName" class="hidden"></div>
+        <!-- セリフまたはナレーションテキスト -->
+        <p id="dialogText" class="text-gray-900 text-lg leading-relaxed"></p>
+        
+        <!-- 選択肢エリア -->
+        <div id="choicesContainer" class="w-full mt-2 space-y-2">
+            <!-- 選択肢ボタンがJSによって挿入されます -->
+        </div>
+
+        <!-- 進行ボタン -->
+        <button id="nextButton" class="hidden" aria-label="次のシーンへ進む">次へ >></button>
+    </div>
+</div>
+
+<script>
+    // グローバルなゲーム状態
+    let currentSceneId = 'P1_Intro';
+    let isTransitioning = false;
+    let preEonsCleared = false;
+    let typingInterval = null;
+    let isTyping = false;
+    
+    // 失敗時に使用する画像URL
+    const FAIL_IMAGE_URL = 'https://i.postimg.cc/MZ0TdK1Y/IMG-5383.jpg';
+    
+    // ** 最終的なキャラクター立ち絵のURL（ユーザー指示に基づく） **
+    // 1枚目: 燃燈仏
+    const PORTRAIT_BUDDHA = 'https://i.postimg.cc/25N5mDBj/IMG-5381.png'; 
+    // 2枚目: 善慧童子 (男性)
+    const PORTRAIT_MAN_HANDS = 'https://i.postimg.cc/hGRGgB7D/IMG-5380.png'; 
+    // 3枚目: 花を持ってない女性 (使用しないが定義は残す)
+    const PORTRAIT_WOMAN_NO_FLOWER = 'https://i.postimg.cc/ZqzqZSyT/IMG-5379.png'; 
+    // 4枚目: 花を持っている女性
+    const PORTRAIT_WOMAN_FLOWER = 'https://i.postimg.cc/g0b0dW6F/IMG-5378.png'; 
+
+    /**
+     * クリック動作のログ出力（音声は軽量化のため無効）
+     */
+    function playClick() {
+        console.log("Click (Sound Disabled)");
+    }
+
+    /**
+     * ゲームデータ定義（立ち絵URLとキャラクター設定を最新に更新）
+     */
+    const gameData = {
+        // ナレーション（善慧童子）のシーン。立ち絵はなし
+        'P1_Intro': { img: 'https://i.postimg.cc/kD7Qd2ff/image.png', char: '善慧童子', dialog: 'ここは遠い過去の世。あなたは**善慧童子**として、修行の身。森で草木を採集し、生計を立てています。', text: 'これは、未来の釈迦となる善慧童子の物語である。', next: 'P2_News', choices: null, portrait: null }, 
+        
+        // ナレーションのシーン。立ち絵はなし
+        'P2_News': { img: 'https://i.postimg.cc/3W3XHknP/image.png', char: null, dialog: null, text: '街では、**燃燈仏（ねんとうぶつ）**という偉大な仏様がおいでになるという噂で持ちきりであった。燃燈仏に供養すれば、大きな功徳が得られるであろう。', next: 'P3_Desire', choices: null, portrait: null },
+        
+        // 善慧童子のセリフ
+        'P3_Desire': { img: 'https://i.postimg.cc/kD7Qd2ff/image.png', char: '善慧童子', dialog: '私も燃燈仏様にお供えをしたい！しかし、私は貧しく、手元には何も供養できるものがありません...', text: '善慧童子は、仏への強い帰依の心に突き動かされていた。', next: 'P4_Flowers', choices: null, portrait: PORTRAIT_MAN_HANDS },
+        
+        // ナレーションのシーン。立ち絵はなし
+        'P4_Flowers': { img: 'https://i.postimg.cc/kD7Qd2TC/image.png', char: null, dialog: null, text: 'あなたは一人の女性と出会い、彼女が**五茎の青蓮華**を持っているのを見つけた。これは大変貴重なお花である。彼女に蓮華を分けてほしいと頼むことになった。', next: 'P5_Choice_A', choices: null, portrait: null },
+        
+        // 花を持っている女性のセリフと選択肢
+        'P5_Choice_A': { img: 'https://i.postimg.cc/xjztMHHN/IMG-5371.jpg', char: '女性', dialog: 'この五茎の蓮華は、未来の善因を結ぶ種です。これをどう使いますか？', text: '女性は、蓮華を差し出しながら、善慧童子の心のあり方を試した。', next: null, choices: [ { text: '① 5本すべてを自分の功徳のために燃燈仏に供える', next: 'P_Fail_Selfish', correct: false }, { text: '② 5本すべてを女性に供えさせ、彼女の供養を優先する', next: 'P6_MudPath', correct: true }, { text: '③ 2本を仏に、残りの3本を私自身のために使う', next: 'P_Fail_Partial', correct: false } ], portrait: PORTRAIT_WOMAN_FLOWER }, 
+        
+        // ナレーションのシーン。立ち絵はなし
+        'P6_MudPath': { img: 'https://i.postimg.cc/pVFqz88p/IMG-5372.jpg', char: null, dialog: null, text: '善慧童子は利他を優先し、功徳を譲った。やがて燃燈仏が**泥濘（ぬかるみ）の道**を通られることになった。このままでは仏のお足が汚れてしまう。', next: 'P7_Choice_B', choices: null, portrait: null },
+        
+        // 善慧童子のセリフと選択肢
+        'P7_Choice_B': { img: 'https://i.postimg.cc/pVFqz88p/IMG-5372.jpg', char: '善慧童子', dialog: '仏の足元を清めるため、私はどう行動すべきでしょうか？', text: '仏への供養を成就させるため、善慧童子は究極の選択を迫られた。', next: null, choices: [ { text: '① 近くの草を集め、泥の上に敷き詰める', next: 'P_Fail_Temporary', correct: false }, { text: '② 自分の持っている履物を脱ぎ、泥の上に置く', next: 'P_Fail_Temporary', correct: false }, { text: '③ 自分の髪をほどき、泥の上に敷き詰め、身をもって仏の足を支える', next: 'P8_Enlightened', correct: true } ], portrait: PORTRAIT_MAN_HANDS },
+        
+        // 燃燈仏のセリフ
+        'P8_Enlightened': { img: 'https://i.postimg.cc/NGHpmTTT/IMG-5373.jpg', char: '燃燈仏', dialog: '「**汝は未来世において、必ず釈迦牟尼仏となるであろう**」（記別）。', text: '燃燈仏は泥の上に敷かれた善慧童子の髪を踏み越え、静かに未来の成仏を予言された。', next: 'P_Clear', choices: null, portrait: PORTRAIT_BUDDHA }, 
+        
+        // クリア画面。ナレーション役としてキャラクター名表示のみ
+        'P_Clear': { img: 'https://i.postimg.cc/pXTHz2Cj/IMG-5384.jpg', char: 'ナレーター', dialog: '🌟**前世バージョンクリア！**🌟 あなたは身命を惜しまぬ究極の善行（因）を積みました！この功徳が現世で仏陀となる（果）を約束します！', text: null, next: 'P_Menu', choices: null, portrait: null },
+        
+        // 失敗画面。ナレーション役としてキャラクター名表示のみ
+        'P_Fail_Selfish': { img: FAIL_IMAGE_URL, char: 'ナレーター', dialog: '自分の功徳を優先する利己的な動機では、大いなる仏陀の因を積むことはできませんでした...。', text: '釈迦への道は閉ざされた。', next: 'P_Fail_Menu', choices: null, portrait: null },
+        'P_Fail_Partial': { img: FAIL_IMAGE_URL, char: 'ナレーター', dialog: '惜しい！功徳はありましたが、一切を捧げる覚悟が足りませんでした。釈迦への道は閉ざされました...。', text: '釈迦への道は閉ざされた。', next: 'P_Fail_Menu', choices: null, portrait: null },
+        'P_Fail_Temporary': { img: FAIL_IMAGE_URL, char: 'ナレーター', dialog: 'あなたの親切心は素晴らしいですが、仏陀となるためには身命を惜しまない完全な献身（因）が必要でした。', text: '釈迦への道は閉ざされた。', next: 'P_Fail_Menu', choices: null, portrait: null },
+        
+        // メニュー画面。ナレーション役としてキャラクター名表示のみ
+        'P_Menu': { img: 'https://i.postimg.cc/pXTHz2Cj/IMG-5384.jpg', char: 'ナレーター', dialog: '前世編をクリアしました！このまま「現世バージョン」に進みますか？', text: null, next: null, choices: [ { text: '現世バージョンへつづく（未実装）', next: 'C1_Start', correct: true }, { text: '最初にもどる', next: 'P1_Intro', correct: true } ], portrait: null },
+        'P_Fail_Menu': { img: FAIL_IMAGE_URL, char: 'ナレーター', dialog: '残念ながら、正しい因を積むことができませんでした。最初からやり直しますか？', text: null, next: null, choices: [ { text: '最初にもどる', next: 'P1_Intro', correct: true } ] , portrait: null },
+        
+        // 現世編（未実装）。ナレーション役としてキャラクター名表示のみ
+        'C1_Start': { img: 'https://i.postimg.cc/ryrQxWW5/IMG-5375.jpg', char: 'ナレーター', dialog: '（現世編）前世の功徳により、あなたはついに王族シッダールタとして生まれました。ここからは現世の物語です。', text: '新たな生が始まった。', next: 'P_Menu', choices: null, portrait: null },
+    };
+
+    // --- DOM要素の取得 ---
+    const sceneImage = document.getElementById('sceneImage');
+    const fadeOverlay = document.getElementById('fadeOverlay');
+    const dialogText = document.getElementById('dialogText');
+    const smidaName = document.getElementById('smidaName');
+    const nextButton = document.getElementById('nextButton');
+    const choicesContainer = document.getElementById('choicesContainer');
+    const dialogBox = document.getElementById('dialogBox');
+    const characterPortrait = document.getElementById('characterPortrait'); // 立ち絵要素
+
+    /**
+     * クリック動作のログ出力（音声は軽量化のため無効）
+     */
+    function playClick() {
+        console.log("Click (Sound Disabled)");
+    }
+
+    /**
+     * タイプライターエフェクトでテキストを表示する
+     */
+    function startTyping(fullText) {
+        return new Promise((resolve) => {
+            clearInterval(typingInterval);
+            isTyping = true;
+            dialogText.innerHTML = '';
+            let charIndex = 0;
+            const textChars = fullText.split('');
+            nextButton.classList.add('hidden'); 
+
+            typingInterval = setInterval(() => {
+                if (charIndex < textChars.length) {
+                    // HTMLタグをスキップするロジック
+                    if (textChars[charIndex] === '<') {
+                        let tagEndIndex = fullText.indexOf('>', charIndex);
+                        if (tagEndIndex !== -1) {
+                            const tag = fullText.substring(charIndex, tagEndIndex + 1);
+                            dialogText.innerHTML += tag;
+                            charIndex = tagEndIndex + 1;
+                        } else {
+                            dialogText.innerHTML += textChars[charIndex];
+                            charIndex++;
+                        }
+                    } else {
+                        dialogText.innerHTML += textChars[charIndex]; 
+                        charIndex++;
+                    }
+                } else {
+                    clearInterval(typingInterval);
+                    isTyping = false;
+                    resolve(); 
+                    // タイピング完了後、必ずアクションをチェックし、ボタンを表示する
+                    checkPostTypingAction();
+                }
+            }, 50);
+        });
+    }
+
+    /**
+     * テキスト表示中にクリックされたら即座に全文表示する
+     */
+    function skipTyping() {
+        if (!isTyping) return;
+        
+        clearInterval(typingInterval);
+        isTyping = false;
+        playClick(); // クリックログ
+
+        const scene = gameData[currentSceneId];
+        // ナレーションかセリフかを判断して表示
+        let fullText = scene.char && scene.dialog ? `「${scene.dialog}」` : scene.text || '';
+        if (fullText.length === 0 && scene.text) {
+             fullText = scene.text; // charとdialogがない場合はtextを表示
+        }
+        dialogText.innerHTML = fullText;
+
+        checkPostTypingAction();
+    }
+    
+    /**
+     * タイプが完了した後のアクション (選択肢表示 or 次へボタン表示) をチェック
+     */
+    function checkPostTypingAction() {
+        const scene = gameData[currentSceneId];
+        
+        if (scene.choices && scene.choices.length > 0) {
+            // 選択肢がある場合: 選択肢ボタンを表示し、「次へ >>」ボタンは非表示
+            choicesContainer.innerHTML = ''; 
+            scene.choices.forEach((choice) => {
+                const button = document.createElement('button');
+                button.className = 'choice-button';
+                button.textContent = choice.text;
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    playClick(); 
+                    handleChoice(choice);
+                });
+                choicesContainer.appendChild(button);
+            });
+            nextButton.classList.add('hidden');
+        } else if (scene.next || currentSceneId.includes('_Fail') || currentSceneId === 'P_Clear' || currentSceneId === 'P_Menu' || currentSceneId === 'P_Fail_Menu') {
+            // 選択肢がなく、次に進むべき場所がある場合: 「次へ >>」ボタンを表示
+            nextButton.classList.remove('hidden');
+            choicesContainer.innerHTML = ''; // 選択肢をクリア
+        }
+    }
+
+
+    /**
+     * 白いモヤのフェードイン/アウトを制御し、次のシーンへ遷移する
+     * @param {string} sceneId - 次のシーンID
+     */
+    function triggerTransition(sceneId) {
+        if (isTransitioning) {
+            return;
+        }
+        isTransitioning = true;
+        
+        // 1. フェードイン
+        fadeOverlay.style.opacity = '1';
+        
+        // トランジション中は立ち絵を非表示にする
+        characterPortrait.classList.remove('active');
+        characterPortrait.classList.add('hidden'); 
+
+        setTimeout(() => {
+            // 2. シーンデータの更新
+            currentSceneId = sceneId;
+            renderScene();
+            
+            // 3. フェードアウト
+            fadeOverlay.style.opacity = '0';
+            
+            // 4. トランジション終了
+            setTimeout(() => {
+                isTransitioning = false;
+            }, 500); 
+        }, 500); 
+    }
+
+    /**
+     * 現在のシーンデータに基づいてUIをレンダリングする
+     */
+    async function renderScene() {
+        const scene = gameData[currentSceneId];
+        if (!scene) {
+            console.error('致命的なエラー: シーンIDが見つかりません:', currentSceneId);
+            currentSceneId = 'P1_Intro';
+            renderScene();
+            return;
+        }
+        
+        // 背景画像の更新
+        sceneImage.style.backgroundImage = `url('${scene.img}')`;
+        const img = new Image();
+        img.onerror = () => {
+            sceneImage.style.backgroundImage = `url('https://placehold.co/500x500/94a3b8/ffffff?text=Image+Load+Error')`;
+        };
+        img.src = scene.img;
+
+        choicesContainer.innerHTML = '';
+        nextButton.classList.add('hidden'); 
+
+        let textToDisplay = '';
+        
+        if (scene.char && scene.dialog) {
+            smidaName.textContent = scene.char;
+            smidaName.classList.remove('hidden');
+            textToDisplay = `「${scene.dialog}」`;
+        } else {
+            smidaName.classList.add('hidden');
+            textToDisplay = scene.text || '';
+        }
+
+        // **キャラクター立ち絵の表示/非表示ロジック**
+        // キャラクター名が設定されていて、立ち絵URLも設定されている場合のみ表示
+        if (scene.char && scene.portrait) { 
+            characterPortrait.src = scene.portrait;
+            characterPortrait.classList.remove('hidden');
+            characterPortrait.classList.add('active'); // フェードインアニメーション用
+        } else {
+            characterPortrait.classList.remove('active');
+            characterPortrait.classList.add('hidden'); // 非表示
+        }
+
+
+        await startTyping(textToDisplay);
+        
+        if (currentSceneId === 'P_Clear') {
+            preEonsCleared = true;
+        }
+    }
+
+    /**
+     * 進行ボタンが押された時の処理
+     */
+    function nextScene() {
+        if (isTransitioning) {
+            return;
+        }
+
+        const scene = gameData[currentSceneId];
+        if (scene && scene.next) {
+            playClick(); 
+            triggerTransition(scene.next);
+        } else {
+             // nextが設定されていないシーン（クリア/失敗/メニュー）からの遷移
+             if (currentSceneId.includes('_Fail')) {
+                 triggerTransition('P_Fail_Menu');
+            } else if (currentSceneId === 'P_Clear') {
+                 triggerTransition('P_Menu');
+            } else if (currentSceneId === 'P_Menu' || currentSceneId === 'P_Fail_Menu') {
+                // メニューや失敗画面でnextボタンを押しても何も起こらないようにする (選択肢で遷移させる)
+                console.log("Menu screen. Please select an option.");
+            }
+        }
+    }
+    
+    // --- イベントリスナーの設定 ---
+
+    // **【最重要】次のシーンへ進むための専用ボタンのイベントリスナー**
+    nextButton.addEventListener('click', (e) => {
+        e.stopPropagation(); 
+        nextScene();
+    });
+
+
+    // ダイアログボックス全体がタップされたら、**タイピングをスキップする**のみ
+    const dialogBoxElement = document.getElementById('dialogBox');
+    dialogBoxElement.addEventListener('click', (event) => {
+        // 選択肢ボタンやNextボタンをクリックした場合は無視
+        if (event.target.classList.contains('choice-button') || event.target.id === 'nextButton') {
+            return;
+        }
+        
+        if (isTyping) {
+            // タイプ中: スキップ
+            skipTyping();
+        } else {
+            // タイプ完了後: 何もしない。進行は「次へ >>」ボタンに任せる。
+            return;
+        }
+    });
+
+    /**
+     * 選択肢が選ばれた時の処理
+     * @param {object} choice - 選ばれた選択肢オブジェクト
+     */
+    function handleChoice(choice) {
+        if (isTransitioning) return;
+        
+        triggerTransition(choice.next);
+    }
+
+    /**
+     * ゲーム開始
+     */
+    function initGame() {
+        sceneImage.style.display = 'block'; 
+        dialogBox.style.display = 'flex'; 
+        
+        renderScene();
+    }
+
+
+    // 初期化
+    window.onload = () => {
+        sceneImage.style.display = 'none'; 
+        dialogBox.style.display = 'none'; 
+        
+        initGame();
+        
+        fadeOverlay.style.opacity = '0';
+    };
+
+</script>
+
+</body>
+</html>
+
